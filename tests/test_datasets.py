@@ -411,6 +411,126 @@ class TestDatasetPreparation(unittest.TestCase):
             assert "labels" in dataset.features
             shutil.rmtree(tmp_ds_path)
 
+    def test_token_weighting_integration_downsample(self):
+        """Test token weighting integration with dataset loading - downsampling"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prepared_path = Path(tmp_dir) / "prepared"
+            cfg = DictDefault(
+                {
+                    "tokenizer_config": "huggyllama/llama-7b",
+                    "sequence_len": 1024,
+                    "enable_dataset_token_weighting": True,
+                    "datasets": [
+                        {
+                            "path": "mhenrichsen/alpaca_2k_test",
+                            "type": "alpaca",
+                            "weight": 0.5,
+                            "weight_strategy": "downsample"
+                        },
+                    ],
+                }
+            )
+
+            dataset, _ = load_tokenized_prepared_datasets(
+                self.tokenizer, cfg, prepared_path
+            )
+
+            assert len(dataset) < 2000
+            assert "input_ids" in dataset.features
+            assert "attention_mask" in dataset.features
+            assert "labels" in dataset.features
+
+    def test_token_weighting_integration_upsample(self):
+        """Test token weighting integration with dataset loading - upsampling"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prepared_path = Path(tmp_dir) / "prepared"
+            cfg = DictDefault(
+                {
+                    "tokenizer_config": "huggyllama/llama-7b",
+                    "sequence_len": 1024,
+                    "enable_dataset_token_weighting": True,
+                    "datasets": [
+                        {
+                            "path": "mhenrichsen/alpaca_2k_test",
+                            "type": "alpaca",
+                            "weight": 1.5,
+                            "weight_strategy": "upsample"
+                        },
+                    ],
+                }
+            )
+
+            dataset, _ = load_tokenized_prepared_datasets(
+                self.tokenizer, cfg, prepared_path
+            )
+
+            assert len(dataset) > 2000
+            assert "input_ids" in dataset.features
+            assert "attention_mask" in dataset.features
+            assert "labels" in dataset.features
+
+    def test_token_weighting_disabled_by_default(self):
+        """Test that token weighting is disabled by default"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prepared_path = Path(tmp_dir) / "prepared"
+            cfg = DictDefault(
+                {
+                    "tokenizer_config": "huggyllama/llama-7b",
+                    "sequence_len": 1024,
+                    "datasets": [
+                        {
+                            "path": "mhenrichsen/alpaca_2k_test",
+                            "type": "alpaca",
+                            "weight": 2.0,  # This should be ignored
+                            "weight_strategy": "upsample"
+                        },
+                    ],
+                }
+            )
+
+            dataset, _ = load_tokenized_prepared_datasets(
+                self.tokenizer, cfg, prepared_path
+            )
+
+            assert len(dataset) == 2000
+            assert "input_ids" in dataset.features
+            assert "attention_mask" in dataset.features
+            assert "labels" in dataset.features
+
+    def test_token_weighting_multiple_datasets(self):
+        """Test token weighting with multiple datasets"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prepared_path = Path(tmp_dir) / "prepared"
+            cfg = DictDefault(
+                {
+                    "tokenizer_config": "huggyllama/llama-7b",
+                    "sequence_len": 1024,
+                    "enable_dataset_token_weighting": True,
+                    "datasets": [
+                        {
+                            "path": "mhenrichsen/alpaca_2k_test",
+                            "type": "alpaca",
+                            "weight": 0.5,
+                            "weight_strategy": "downsample"
+                        },
+                        {
+                            "path": "mhenrichsen/alpaca_2k_test",
+                            "type": "alpaca",
+                            "weight": 1.0,  # No change
+                        },
+                    ],
+                }
+            )
+
+            dataset, _ = load_tokenized_prepared_datasets(
+                self.tokenizer, cfg, prepared_path
+            )
+
+            assert 2000 < len(dataset) < 4000
+            assert "input_ids" in dataset.features
+            assert "attention_mask" in dataset.features
+            assert "labels" in dataset.features
+
 
 if __name__ == "__main__":
     unittest.main()

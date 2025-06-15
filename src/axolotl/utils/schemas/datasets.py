@@ -59,6 +59,8 @@ class SFTDataset(BaseModel):
     drop_system_message: bool | None = None
     trust_remote_code: bool | None = False
     revision: str | None = None
+    weight: float | None = None
+    weight_strategy: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -89,6 +91,20 @@ class SFTDataset(BaseModel):
         if data.get("chat_template_jinja") and not data.get("chat_template"):
             data["chat_template"] = ChatTemplate.jinja
 
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_weight_strategy(cls, data):
+        """Validate weight_strategy parameter"""
+        if isinstance(data, BaseModel):
+            data = data.model_dump()
+        
+        weight_strategy = data.get("weight_strategy")
+        if weight_strategy and weight_strategy not in ["upsample", "downsample"]:
+            raise ValueError(
+                f"weight_strategy must be 'upsample' or 'downsample', got '{weight_strategy}'"
+            )
         return data
 
 

@@ -110,6 +110,7 @@ class AxolotlInputConfig(
         | None
     ) = None
     shuffle_merged_datasets: bool | None = True
+    enable_dataset_token_weighting: bool | None = False
     dataset_prepared_path: str | None = None
     dataset_shard_num: int | None = None
     dataset_shard_idx: int | None = None

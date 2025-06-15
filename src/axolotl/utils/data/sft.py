@@ -311,16 +311,26 @@ def load_tokenized_prepared_datasets(
             prompters.append(dataset_prompter)
 
         if len(datasets) == 1:
-            dataset = datasets[0]
+            LOG.info(f"Single dataset detected. Token weighting enabled: {getattr(cfg, 'enable_dataset_token_weighting', 'NOT_SET')}")
+            if cfg.enable_dataset_token_weighting:
+                LOG.info("Applying token weighting to single dataset")
+                from axolotl.utils.data.token_weighting import merge_datasets
+                dataset = merge_datasets(datasets, cfg_datasets, cfg)
+            else:
+                dataset = datasets[0]
         else:
             LOG.info("merging datasets")
-            dataset = concatenate_datasets(datasets)
+            if cfg.enable_dataset_token_weighting:
+                from axolotl.utils.data.token_weighting import merge_datasets
+                dataset = merge_datasets(datasets, cfg_datasets, cfg)
+            else:
+                dataset = concatenate_datasets(datasets)
 
         if len(datasets) > 1:
-            if cfg.shuffle_merged_datasets:
+            if cfg.shuffle_merged_datasets and not cfg.enable_dataset_token_weighting:
                 LOG.debug("shuffle merged datasets")
                 dataset = dataset.shuffle(seed=seed)
-            else:
+            elif not cfg.enable_dataset_token_weighting:
                 LOG.debug("NOT shuffling merged datasets")
 
         if not cfg.skip_prepare_dataset:
